@@ -10,13 +10,13 @@ site-twitter: #if your site has a twitter account, enter it here
 
 # Author Settings
 author: 건우 # add your name
-author-img: 1598431314481_1.jpg # add your photo
-about-author: 저는 개발자 겸 강사를 하고 있습니다. 매운맛으로 강의 합니다. # add description
+author-img: KakaoTalk_20221206_151417668.jpg # add your photo
+about-author: 백엔드 개발자 입니다 # add description
 social-twitter: # add your Twitter handle
 social-facebook: # add your Facebook handle
-social-github: kyeongrok # add your Github handle
+social-github: KimGunWoo9595 # add your Github handle
 social-linkedin: kyeongrok-kim # add your Linkedin handle
-social-email: oceanfog1@gmail.com # add your Email address
+social-email: lancetmad@gmail.com # add your Email address
 
 # Disqus
 # discus-identifier: mr-brown # add your discus identifier
