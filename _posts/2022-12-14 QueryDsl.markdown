@@ -1,0 +1,156 @@
+> ### 동적쿼리란? 
+동적쿼리란 실행시에 쿼리문장이 만들어져 실행되는 쿼리문을 말한다. 쿼리문이 변하냐 변하지 않느냐에 따라 변하지 않으면 정적쿼리 변한다면 동적쿼리이다. 대부분 동적쿼리를 사용할때에는 텍스트문장으로 쿼리문을 가지고 있다가 실행할때마다 텍스트 쿼리문장을 바꿔서 실행하는 방식을 사용한다. 주로 검색에 있어서 동적 쿼리가 많이 사용되어진다.
+
+예를들어서 회원의 이름과 나이로 검색하는 동적 쿼리가 있다고 생각해보자.
+- name 값이 들어오고 age는 null이라면  WHERE name = ${name}
+- age 값이 들어오고 name은 null이라면  WHERE age = ${age}
+- name과 age가 모두 들어오면 WHERE name = ${name}  AND age = ${age} 이다.
+- name과 age 모두 들어오지 않으면(null) WHERE 절을 사용하지 않는다.
+
+>여기서 **null로 들어올시 동적쿼리는 where에 null이 있다면 그냥 무시가 된다.** 그래서 동적쿼리가 작용하는것이고 이것이 굉장한 키포인트이다.
+
+## BooleanBulider 사용하기
+> **BooleanBuilder란?**
+쿼리의 조건 설정인 where뒤의 조건을 생성해주는 것이라고 생각하면 된다. 파라미터로 들어오는 값이 존재할 때(null이 아닌 상황) 생성된 BooleanBulider에 builder 패턴으로 where의 조건을 추가해주는 것이다.
+***
+**BooleanBulider를 사용할 시 keyPoint** 
+- where()에 **null이 들어오면 무시**한다.(이 기능 때문에 동적쿼리 동작 가능)
+- where()에 and 조건으로 사용한다
+
+* 다음의 코드는 회원의 이름과 나이로 검색을 하는 동적 쿼리이다.
+```java
+    @Test
+    @DisplayName("@BooleanBulider 사용 동적쿼리")
+    void dynamicQuery_BooleanBuilder() throws Exception {
+        //검색 조건
+        String usernameParam = "member1";
+        Integer ageParam = 10;
+
+        List<Member> members = searchMember1(usernameParam, ageParam);
+
+        assertThat(members.size()).isEqualTo(1);
+
+
+    }
+```
+- BooleanBulider를 사용한 동적쿼리 메서드
+```java
+ private List<Member> searchMember1(String usernameCond,Integer ageCond) {
+        BooleanBuilder builder = new BooleanBuilder();
+        //usernameCond 에 값이 있으면 BooleanBuilder에 and 조건을 넣어 준 것이다.
+        if (usernameCond != null) { //<- 앞서 말한 null이 아닐 때의 조건 
+            builder.and(member.username.eq(usernameCond));
+        }
+        if (ageCond != null) { //<- 앞서 말한 null이 아닐 때의 조건 
+            builder.and(member.age.eq(ageCond));
+        }
+        return jpaQueryFactory
+                .selectFrom(member)
+                .where(builder) // <- 생성된 BooleanBulider의 where 조건을 넣어주자
+                .fetch();
+    }
+```
+> **BooleanBuilder의 존재하는 단점**
+문제점은 where절을 통째로 보기가 어렵다. 지금은 2개의 조건이라서 가독성의 큰 문제가 없을 수 있지만 조건이 많을수록 로직을 따라가면서 신경을 기울여야 쿼리문을 이해할 수 있다. 
+
+## BooleanExpression 사용하기
+
+앞서 BooleanBuilder는 가독성의 단점이 존재한다고 하였다. 이러한 가독성 문제를 타파할 수 있는 방법이 바로 BooleanExpression이다. 우선 코드를 보기전에 이 코드는 메소드가 많아서 오히려 멘붕이 오거나 이 전의 방법을 사용하고싶다라는 생각이 들 수있다. 하지만 유지보수나 메소드의 조립 측면에서 이 방법이 더 나은 방법이다. 지금은 우선 where() 조건 안에 메소드로 조건을 넣어준다고 생각하자.
+
+- where 다중 파라미터 사용 
+```java
+    @Test
+    @DisplayName("Where 다중 파라미터 사용 ")
+    void dynamicQuery_WhereParam() throws Exception {
+        //검색 조건
+        String usernameParam = "member2";
+        Integer ageParam = 20;
+        
+        List<Member> members = searchMember2(usernameParam, ageParam);
+
+        assertThat(members.size()).isEqualTo(1);
+    }
+```
+test코드를 만들어 주었다 searchMember2라는 메서드에 username과 age의 파라미터를 넣어주었다. 기대 반환 타입은 Member 타입의 list이다. 
+- searchMember2 메서드🔽
+```java
+  private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return jpaQueryFactory
+                .selectFrom(member) // where에 null이 있다면 그냥 무시가된다. 그래서 동적쿼리가 작용하는것
+                .where(usernameEq(usernameCond),ageEq(ageCond)) // allEq(usernameCond,ageCond) 이렇게도 사용가능!
+                .fetch();
+    }
+```
+앞서 말한 메소드가 많아서 멘붕이 올 수있다고 했었는데 , 그런생각을 갖지말자. where() 조건안데 2개의 메서드를 파라미터로 넣어준 것이다. 자바를 처음 배울 때 나는 어떠한 강사님이 메소드는 뭐라고 생각하냐라고 나에게 여쭤본적이있다. 그때의 신선한 충격과 강사님의 답변이 나는 아직 기억에 남는다. **메서드는 값을 담는 보이지 않는 변수이다.** 라고 말씀하신게 기억에 남는다. 물론 다른 목적도 존재하지만 여기서는 메서드는 값을 담는 변수라고 생각하고 첫번째 메서드는 userName의 값을 담고있고 두번째 메서드는 age를 담고 있다고 생각하자.
+- username의 값을 담은 usernameEq 메서드 🔽
+```java
+ private BooleanExpression usernameEq(String usernameCond) {
+        //usernameCond가 null이면 null을 반환
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+```
+- age의 값을 담은 usernameEq 메서드 🔽
+```java
+  private BooleanExpression ageEq(Integer ageCond) {
+        if(ageCond == null) return null;
+        return member.age.eq(ageCond);
+    }
+```
+> **keyPoint**
+삼항 연산자를 사용하여 null이 들어올 때에는 null로 반환을 해주고 값이 있을때는 where의 조건을 반환하게 해주었다. (동적쿼리의 키포인트는 where에 null이 있다면 그냥 무시) 그리고 해당 메서드를 처음 만들었을 때에는 Predicate 리턴 타입인데 BooleanExpression 리턴 타입으로 바꾸어주자! 
+
+BooleanExpression 을 초반에 설명할 때 __조립을 위해서__ 라고 한적이 있다. 그리고 바로 앞서 Predicate 타입을 BooleanExpression 타입으로 바꾸라고 하였다. 그이유가 이제 나온다. 바로 메서드의 조립을 위해서이다. 
+```java
+private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return jpaQueryFactory
+                .selectFrom(member) // where에 null이 있다면 그냥 무시가된다. 그래서 동적쿼리가 작용하는것
+                .where(usernameEq(usernameCond),ageEq(ageCond)) // allEq(usernameCond,ageCond) 이렇게도 사용가능!
+                .fetch();
+    }
+```
+where() 문에 2개의 메서드가 들어가있다. 다시 생각해보면 2개의 메서드를 한개의 메서드로 합칠 수 있는것이다. 그래서 메서드의 리턴타입은 BooleanExpression로 해주어야한다,. 
+다음의 메서드는 앞서 usernameEq() 와 ageEq()메서드를 합친 메서드이다.
+```java
+ private BooleanExpression allEq(String usernameCond, Integer ageCond) {
+        return usernameEq(usernameCond).and(ageEq(ageCond));
+    }
+```
+그러면 이제 다음과 같이 하나의 메서드로 where()문 안에 표현할 수 있는 것이다.
+```java
+  private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return jpaQueryFactory
+                .selectFrom(member) // where에 null이 있다면 그냥 무시가된다. 그래서 동적쿼리가 작용하는것
+                .where(allEq(usernameCond,ageCond)) // allEq(usernameCond,ageCond)
+                .fetch();
+    }
+
+```
+- 실행된 쿼리문 🔽
+```sql
+   select
+        member0_.member_id as member_i1_0_,
+        member0_.age as age2_0_,
+        member0_.team_id as team_id4_0_,
+        member0_.username as username3_0_ 
+    from
+        member member0_ 
+    where
+        member0_.username=? 
+        and member0_.age=?
+```
+- 동적쿼리 where 조건에 null이 들어오면? (여기서는 예를 들어서 userName이 null로 들어왔다 해보겠다.) 
+
+```sql
+select
+        member0_.member_id as member_i1_0_,
+        member0_.age as age2_0_,
+        member0_.team_id as team_id4_0_,
+        member0_.username as username3_0_ 
+    from
+        member member0_ 
+    where
+        member0_.age=?
+```
+
+> userName에 null을 주고 sql문을 보면 where조건에 age만 조건에 들어간 것을 볼 수 있다. 
+명심하자! 동적쿼리는 where의 조건에 **null이 들어간다면 sql에서 알아서 무시가 된다**
