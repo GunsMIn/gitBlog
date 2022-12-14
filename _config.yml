@@ -10,12 +10,12 @@ site-twitter: #if your site has a twitter account, enter it here
 
 # Author Settings
 author: 건우 # add your name
-author-img: KakaoTalk_20221206_151417668.jpg # add your photo
+author-img: KakaoTalk_20221206_151035622.jpg # add your photo
 about-author: 백엔드 개발자 입니다 # add description
 social-twitter: # add your Twitter handle
 social-facebook: # add your Facebook handle
 social-github: KimGunWoo9595 # add your Github handle
-social-linkedin: kyeongrok-kim # add your Linkedin handle
+social-linkedin: kim # add your Linkedin handle
 social-email: lancetmad@gmail.com # add your Email address
 
 # Disqus
